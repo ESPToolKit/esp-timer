@@ -3,12 +3,12 @@
 - v0.1
   - [x] Core API: setTimeout, setInterval
   - [x] Counter APIs: per-second, per-ms, per-minute
-  - [x] Pause (toggle), Stop, Status by ID
+  - [x] Pause, Resume, Toggle Run Status, Clear, Status by ID
   - [x] FreeRTOS task per timer type with configurable stack/priority/core
   - [x] Examples and README
 
 - v0.2
-  - [ ] Add resume* explicit methods (aliases of pause toggle) if desired
+  - [x] Add resume* explicit methods
   - [ ] Optional removal policy for completed timers (callbacks to notify)
   - [ ] Optional per-timer core/priority overrides
 

@@ -50,19 +50,33 @@ class ESPTimer {
   uint32_t setMsCounter(std::function<void(uint32_t msLeft)> cb, uint32_t totalMs);
   uint32_t setMinCounter(std::function<void(int minLeft)> cb, uint32_t totalMs);
 
-  // Pause toggles between Paused<->Running; returns true on state changed
+  // Pause: set status to Paused if currently Running; returns true on state change
   bool pauseTimer(uint32_t id);
   bool pauseInterval(uint32_t id);
   bool pauseSecCounter(uint32_t id);
   bool pauseMsCounter(uint32_t id);
   bool pauseMinCounter(uint32_t id);
 
-  // Stop and remove timers; returns true on success
-  bool stopTimer(uint32_t id);
-  bool stopInterval(uint32_t id);
-  bool stopSecCounter(uint32_t id);
-  bool stopMsCounter(uint32_t id);
-  bool stopMinCounter(uint32_t id);
+  // Resume: set status to Running if currently Paused; returns true on state change
+  bool resumeTimer(uint32_t id);
+  bool resumeInterval(uint32_t id);
+  bool resumeSecCounter(uint32_t id);
+  bool resumeMsCounter(uint32_t id);
+  bool resumeMinCounter(uint32_t id);
+
+  // Toggle running status between Running <-> Paused; returns true if now Running
+  bool toggleRunStatusTimer(uint32_t id);
+  bool toggleRunStatusInterval(uint32_t id);
+  bool toggleRunStatusSecCounter(uint32_t id);
+  bool toggleRunStatusMsCounter(uint32_t id);
+  bool toggleRunStatusMinCounter(uint32_t id);
+
+  // Clear (stop and remove) timers; returns true on success
+  bool clearTimer(uint32_t id);
+  bool clearInterval(uint32_t id);
+  bool clearSecCounter(uint32_t id);
+  bool clearMsCounter(uint32_t id);
+  bool clearMinCounter(uint32_t id);
 
   // Status
   ESPTimerStatus getStatus(uint32_t id);
@@ -143,8 +157,10 @@ class ESPTimer {
   void minTask();
 
   // Helpers
-  bool togglePause(Type type, uint32_t id);
-  bool stopItem(Type type, uint32_t id);
+  bool pauseItem(Type type, uint32_t id);
+  bool resumeItem(Type type, uint32_t id);
+  ESPTimerStatus togglePause(Type type, uint32_t id); // internal: returns new status or Invalid if not found
+  bool clearItem(Type type, uint32_t id);
   ESPTimerStatus getItemStatus(Type type, uint32_t id);
 };
 

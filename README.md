@@ -8,7 +8,7 @@ Features
 - `setTimeout` (one-shot), `setInterval` (periodic)
 - Counters: per-second, per-millisecond, per-minute with remaining time
 - Each timer type runs on its own FreeRTOS task
-- Pause (toggle pause/resume), stop, and status query per timer ID
+- Pause, resume, toggle run status, clear, and status query per timer ID
 
 Quick Start
 - Include `#include <ESPTimer.h>` and call `timer.init()` once (optionally with `ESPTimerConfig`).
@@ -40,16 +40,18 @@ uint32_t id5 = timer.setMinCounter([](int minLeft){
   Serial.printf("%d min left so far\n", minLeft);
 }, 10000);
 
-// Pause/resume (toggle) and stop
-timer.pauseInterval(id2); // toggles between Paused <-> Running
-timer.stopInterval(id2);
+// Pause, resume, toggle, and clear
+timer.pauseInterval(id2);                         // Pauses if running
+timer.resumeInterval(id2);                        // Resumes if paused
+bool running = timer.toggleRunStatusInterval(id2); // Toggles; true if now running
+timer.clearInterval(id2);
 
 // Status
 ESPTimerStatus status = timer.getStatus(id1);
 ```
 
 Notes
-- `pause*` is a toggle: calling on a running timer pauses it; calling again resumes it.
+- `pause*` only pauses (idempotent). Use `resume*` to resume, or `toggleRunStatus*` to toggle (returns `true` if now running).
 - `setMsCounter` can be CPU intensive; use sparingly and keep callbacks very light.
 - Each type uses its own FreeRTOS task. Configure stack, priority, and core with `ESPTimerConfig`.
 

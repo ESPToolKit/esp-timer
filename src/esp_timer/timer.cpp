@@ -140,18 +140,78 @@ uint32_t ESPTimer::setMinCounter(std::function<void(int)> cb, uint32_t totalMs) 
   return id;
 }
 
-// Public API: pause/stop/status
-bool ESPTimer::togglePause(Type type, uint32_t id) {
-  bool changed = false;
+// Public API: pause/clear/status
+ESPTimerStatus ESPTimer::togglePause(Type type, uint32_t id) {
+  ESPTimerStatus newStatus = ESPTimerStatus::Invalid;
   auto toggle = [&](auto& vec) {
     for (auto& it : vec) {
       if (it.id == id) {
         if (it.status == ESPTimerStatus::Running) {
           it.status = ESPTimerStatus::Paused;
-          changed = true;
+          newStatus = ESPTimerStatus::Paused;
         } else if (it.status == ESPTimerStatus::Paused) {
           it.status = ESPTimerStatus::Running;
           // Shift last tick to avoid immediate burst after long pause
+          if constexpr (std::is_same<decltype(it), IntervalItem&>::value) {
+            it.lastFireMs = millis();
+          } else if constexpr (std::is_same<decltype(it), SecItem&>::value ||
+                               std::is_same<decltype(it), MsItem&>::value ||
+                               std::is_same<decltype(it), MinItem&>::value) {
+            it.lastTickMs = millis();
+          }
+          newStatus = ESPTimerStatus::Running;
+        }
+        return;
+      }
+    }
+  };
+
+  lock();
+  switch (type) {
+    case Type::Timeout: toggle(timeouts_); break;
+    case Type::Interval: toggle(intervals_); break;
+    case Type::Sec: toggle(secs_); break;
+    case Type::Ms: toggle(mss_); break;
+    case Type::Min: toggle(mins_); break;
+  }
+  unlock();
+  return newStatus;
+}
+
+bool ESPTimer::pauseItem(Type type, uint32_t id) {
+  bool changed = false;
+  auto pause_fn = [&](auto& vec) {
+    for (auto& it : vec) {
+      if (it.id == id) {
+        if (it.status == ESPTimerStatus::Running) {
+          it.status = ESPTimerStatus::Paused;
+          changed = true;
+        }
+        return;
+      }
+    }
+  };
+
+  lock();
+  switch (type) {
+    case Type::Timeout: pause_fn(timeouts_); break;
+    case Type::Interval: pause_fn(intervals_); break;
+    case Type::Sec: pause_fn(secs_); break;
+    case Type::Ms: pause_fn(mss_); break;
+    case Type::Min: pause_fn(mins_); break;
+  }
+  unlock();
+  return changed;
+}
+
+bool ESPTimer::resumeItem(Type type, uint32_t id) {
+  bool changed = false;
+  auto resume_fn = [&](auto& vec) {
+    for (auto& it : vec) {
+      if (it.id == id) {
+        if (it.status == ESPTimerStatus::Paused) {
+          it.status = ESPTimerStatus::Running;
+          // Shift last firing/tick reference to now to avoid burst
           if constexpr (std::is_same<decltype(it), IntervalItem&>::value) {
             it.lastFireMs = millis();
           } else if constexpr (std::is_same<decltype(it), SecItem&>::value ||
@@ -168,17 +228,17 @@ bool ESPTimer::togglePause(Type type, uint32_t id) {
 
   lock();
   switch (type) {
-    case Type::Timeout: toggle(timeouts_); break;
-    case Type::Interval: toggle(intervals_); break;
-    case Type::Sec: toggle(secs_); break;
-    case Type::Ms: toggle(mss_); break;
-    case Type::Min: toggle(mins_); break;
+    case Type::Timeout: resume_fn(timeouts_); break;
+    case Type::Interval: resume_fn(intervals_); break;
+    case Type::Sec: resume_fn(secs_); break;
+    case Type::Ms: resume_fn(mss_); break;
+    case Type::Min: resume_fn(mins_); break;
   }
   unlock();
   return changed;
 }
 
-bool ESPTimer::stopItem(Type type, uint32_t id) {
+bool ESPTimer::clearItem(Type type, uint32_t id) {
   bool removed = false;
   auto remove_by_id = [&](auto& vec) {
     auto it = std::remove_if(vec.begin(), vec.end(), [&](auto& n) {
@@ -226,17 +286,39 @@ ESPTimerStatus ESPTimer::getItemStatus(Type type, uint32_t id) {
   return status;
 }
 
-bool ESPTimer::pauseTimer(uint32_t id) { return togglePause(Type::Timeout, id); }
-bool ESPTimer::pauseInterval(uint32_t id) { return togglePause(Type::Interval, id); }
-bool ESPTimer::pauseSecCounter(uint32_t id) { return togglePause(Type::Sec, id); }
-bool ESPTimer::pauseMsCounter(uint32_t id) { return togglePause(Type::Ms, id); }
-bool ESPTimer::pauseMinCounter(uint32_t id) { return togglePause(Type::Min, id); }
+bool ESPTimer::pauseTimer(uint32_t id) { return pauseItem(Type::Timeout, id); }
+bool ESPTimer::pauseInterval(uint32_t id) { return pauseItem(Type::Interval, id); }
+bool ESPTimer::pauseSecCounter(uint32_t id) { return pauseItem(Type::Sec, id); }
+bool ESPTimer::pauseMsCounter(uint32_t id) { return pauseItem(Type::Ms, id); }
+bool ESPTimer::pauseMinCounter(uint32_t id) { return pauseItem(Type::Min, id); }
 
-bool ESPTimer::stopTimer(uint32_t id) { return stopItem(Type::Timeout, id); }
-bool ESPTimer::stopInterval(uint32_t id) { return stopItem(Type::Interval, id); }
-bool ESPTimer::stopSecCounter(uint32_t id) { return stopItem(Type::Sec, id); }
-bool ESPTimer::stopMsCounter(uint32_t id) { return stopItem(Type::Ms, id); }
-bool ESPTimer::stopMinCounter(uint32_t id) { return stopItem(Type::Min, id); }
+bool ESPTimer::resumeTimer(uint32_t id) { return resumeItem(Type::Timeout, id); }
+bool ESPTimer::resumeInterval(uint32_t id) { return resumeItem(Type::Interval, id); }
+bool ESPTimer::resumeSecCounter(uint32_t id) { return resumeItem(Type::Sec, id); }
+bool ESPTimer::resumeMsCounter(uint32_t id) { return resumeItem(Type::Ms, id); }
+bool ESPTimer::resumeMinCounter(uint32_t id) { return resumeItem(Type::Min, id); }
+
+bool ESPTimer::toggleRunStatusTimer(uint32_t id) {
+  return togglePause(Type::Timeout, id) == ESPTimerStatus::Running;
+}
+bool ESPTimer::toggleRunStatusInterval(uint32_t id) {
+  return togglePause(Type::Interval, id) == ESPTimerStatus::Running;
+}
+bool ESPTimer::toggleRunStatusSecCounter(uint32_t id) {
+  return togglePause(Type::Sec, id) == ESPTimerStatus::Running;
+}
+bool ESPTimer::toggleRunStatusMsCounter(uint32_t id) {
+  return togglePause(Type::Ms, id) == ESPTimerStatus::Running;
+}
+bool ESPTimer::toggleRunStatusMinCounter(uint32_t id) {
+  return togglePause(Type::Min, id) == ESPTimerStatus::Running;
+}
+
+bool ESPTimer::clearTimer(uint32_t id) { return clearItem(Type::Timeout, id); }
+bool ESPTimer::clearInterval(uint32_t id) { return clearItem(Type::Interval, id); }
+bool ESPTimer::clearSecCounter(uint32_t id) { return clearItem(Type::Sec, id); }
+bool ESPTimer::clearMsCounter(uint32_t id) { return clearItem(Type::Ms, id); }
+bool ESPTimer::clearMinCounter(uint32_t id) { return clearItem(Type::Min, id); }
 
 ESPTimerStatus ESPTimer::getStatus(uint32_t id) {
   // Search across all types; first hit wins

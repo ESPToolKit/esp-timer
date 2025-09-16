@@ -18,12 +18,18 @@ void test_api_compiles() {
   TEST_ASSERT_TRUE(id4 > 0);
   TEST_ASSERT_TRUE(id5 > 0);
 
-  // Pause toggles; should return true if found
+  // Pause then resume; both should return true if found and state changed
   TEST_ASSERT_TRUE(timer.pauseInterval(id2));
-  TEST_ASSERT_TRUE(timer.pauseInterval(id2));
+  TEST_ASSERT_TRUE(timer.resumeInterval(id2));
 
-  // Stop should return true once
-  TEST_ASSERT_TRUE(timer.stopInterval(id2));
+  // Toggle should return new running state
+  bool running = timer.toggleRunStatusInterval(id2);
+  TEST_ASSERT_FALSE(running);
+  running = timer.toggleRunStatusInterval(id2);
+  TEST_ASSERT_TRUE(running);
+
+  // Clear should return true once
+  TEST_ASSERT_TRUE(timer.clearInterval(id2));
 }
 
 void setup() {
@@ -34,4 +40,3 @@ void setup() {
 }
 
 void loop() {}
-

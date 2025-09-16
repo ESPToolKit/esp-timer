@@ -36,20 +36,20 @@ void setup() {
     Serial.printf("%d min left so far\n", minLeft);
   }, 10000);
 
-  // Example: pause/resume interval after 5 sec, then stop after 10 sec
+  // Example: pause then resume interval, then clear
   timer.setTimeout([t2]() {
-    bool paused = timer.pauseInterval(t2);
-    Serial.printf("Interval pause toggled: %s\n", paused ? "ok" : "fail");
+    bool paused = timer.pauseInterval(t2); // pause only
+    Serial.printf("Interval paused: %s\n", paused ? "ok" : "fail");
   }, 5000);
 
   timer.setTimeout([t2]() {
-    bool resumed = timer.pauseInterval(t2); // toggle back to running
-    Serial.printf("Interval resume toggled: %s\n", resumed ? "ok" : "fail");
+    bool resumed = timer.resumeInterval(t2);
+    Serial.printf("Interval resumed: %s\n", resumed ? "ok" : "fail");
   }, 8000);
 
   timer.setTimeout([t2]() {
-    bool stopped = timer.stopInterval(t2);
-    Serial.printf("Interval stopped: %s\n", stopped ? "ok" : "fail");
+    bool cleared = timer.clearInterval(t2);
+    Serial.printf("Interval cleared: %s\n", cleared ? "ok" : "fail");
   }, 12000);
 
   // Check status example
@@ -62,4 +62,3 @@ void setup() {
 void loop() {
   // App code does other things; timers run in background FreeRTOS tasks
 }
-

@@ -24,20 +24,19 @@ void setup() {
 
   // Resume after 6s
   timer.setTimeout([]() {
-    bool ok = timer.pauseInterval(intervalId); // toggle back
+    bool ok = timer.resumeInterval(intervalId);
     Serial.printf("Resumed interval: %s\n", ok ? "ok" : "fail");
     auto s = timer.getStatus(intervalId);
     Serial.printf("Status now: %d (Running=1)\n", (int)s);
   }, 6000);
 
-  // Stop after 10s
+  // Clear after 10s
   timer.setTimeout([]() {
-    bool ok = timer.stopInterval(intervalId);
-    Serial.printf("Stopped interval: %s\n", ok ? "ok" : "fail");
+    bool ok = timer.clearInterval(intervalId);
+    Serial.printf("Cleared interval: %s\n", ok ? "ok" : "fail");
     auto s = timer.getStatus(intervalId);
     Serial.printf("Status now: %d (Invalid=0 if removed)\n", (int)s);
   }, 10000);
 }
 
 void loop() {}
-

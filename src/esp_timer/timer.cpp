@@ -408,7 +408,11 @@ void ESPTimer::secTask() {
         if (now - it.lastTickMs >= 1000) {
           it.lastTickMs = now;
           int secLeft = 0;
-          if (it.endAtMs > now) secLeft = static_cast<int>((it.endAtMs - now) / 1000);
+          if (it.endAtMs > now) {
+            uint32_t remaining = it.endAtMs - now;
+            // Round up so we only report 0 when no time remains
+            secLeft = static_cast<int>((static_cast<uint64_t>(remaining) + 999) / 1000);
+          }
           toCall.push_back({it.cb, secLeft});
           if (now >= it.endAtMs) {
             it.status = ESPTimerStatus::Completed;
@@ -477,7 +481,11 @@ void ESPTimer::minTask() {
         if (now - it.lastTickMs >= 60000) {
           it.lastTickMs = now;
           int minLeft = 0;
-          if (it.endAtMs > now) minLeft = static_cast<int>((it.endAtMs - now) / 60000);
+          if (it.endAtMs > now) {
+            uint32_t remaining = it.endAtMs - now;
+            // Round up partial minutes so counters don't drop straight to zero
+            minLeft = static_cast<int>((static_cast<uint64_t>(remaining) + 60000 - 1) / 60000);
+          }
           toCall.push_back({it.cb, minLeft});
           if (now >= it.endAtMs) {
             it.status = ESPTimerStatus::Completed;

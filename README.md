@@ -14,7 +14,7 @@ Quick Start
 - Include `#include <ESPTimer.h>` and call `timer.init()` once (optionally with `ESPTimerConfig`).
 - Use the API similar to JS timers:
 
-```
+```cpp
 // Triggers once
 uint32_t id1 = timer.setTimeout([](){
   Serial.println("1.5 sec is timed out!");

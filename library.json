@@ -1,6 +1,6 @@
 {
   "name": "ESPTimer",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "description": "A Lightweight software timer implementation for esp32",
   "keywords": [
     "esp32",

@@ -1,5 +1,7 @@
 # ESPTimer
 
+[![CI](https://github.com/ESPToolKit/esp-timer/actions/workflows/ci.yml/badge.svg)](https://github.com/ESPToolKit/esp-timer/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/ESPToolKit/esp-timer?sort=semver)](https://github.com/ESPToolKit/esp-timer/releases)
+
 Lightweight JS-like timers for ESP32 with non-blocking FreeRTOS tasks.
 
 Features

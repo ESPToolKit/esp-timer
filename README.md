@@ -1,6 +1,8 @@
 # ESPTimer
 
-[![CI](https://github.com/ESPToolKit/esp-timer/actions/workflows/ci.yml/badge.svg)](https://github.com/ESPToolKit/esp-timer/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/ESPToolKit/esp-timer?sort=semver)](https://github.com/ESPToolKit/esp-timer/releases)
+[![CI](https://github.com/ESPToolKit/esp-timer/actions/workflows/ci.yml/badge.svg)](https://github.com/ESPToolKit/esp-timer/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/ESPToolKit/esp-timer?sort=semver)](https://github.com/ESPToolKit/esp-timer/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 
 Lightweight JS-like timers for ESP32 with non-blocking FreeRTOS tasks.
 
@@ -56,3 +58,7 @@ Notes
 - Each type uses its own FreeRTOS task. Configure stack, priority, and core with `ESPTimerConfig`.
 
 See `examples/Basic/Basic.ino` for a complete sketch.
+
+## ESPToolKit
+
+Check out other libraries under ESPToolKit: https://github.com/orgs/ESPToolKit/repositories

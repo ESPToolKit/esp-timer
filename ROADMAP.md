@@ -19,4 +19,3 @@
 
 Notes
 - `setMsCounter` can be heavy; consider adding a rate limit or soft cap.
-- Consider API sugar for `clearInterval/clearTimeout` aliases.

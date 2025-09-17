@@ -61,5 +61,5 @@ See `examples/Basic/Basic.ino` for a complete sketch.
 
 ## ESPToolKit
 
-Check out other libraries under ESPToolKit: https://github.com/orgs/ESPToolKit/repositories
-Support me at: https://ko-fi.com/esptoolkit
+- Check out other libraries under ESPToolKit: https://github.com/orgs/ESPToolKit/repositories
+- Support me at: https://ko-fi.com/esptoolkit

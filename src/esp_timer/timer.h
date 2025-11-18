@@ -163,6 +163,3 @@ class ESPTimer {
   bool clearItem(Type type, uint32_t id);
   ESPTimerStatus getItemStatus(Type type, uint32_t id);
 };
-
-// Global instance for convenience
-inline ESPTimer timer;

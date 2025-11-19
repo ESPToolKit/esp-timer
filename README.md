@@ -1,69 +1,95 @@
 # ESPTimer
 
+Lightweight JS-like timers for ESP32 with non-blocking FreeRTOS tasks. ESPTimer mirrors `setTimeout`/`setInterval` plus second/millisecond/minute counters so you can schedule work without sprinkling `delay` everywhere.
+
+## CI / Release / License
 [![CI](https://github.com/ESPToolKit/esp-timer/actions/workflows/ci.yml/badge.svg)](https://github.com/ESPToolKit/esp-timer/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/ESPToolKit/esp-timer?sort=semver)](https://github.com/ESPToolKit/esp-timer/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 
-Lightweight JS-like timers for ESP32 with non-blocking FreeRTOS tasks.
+## Features
+- `setTimeout` (one-shot) and `setInterval` (periodic) helpers with numeric IDs.
+- Counter helpers: per-second, per-millisecond, and per-minute callbacks with remaining time.
+- Each timer type runs on its own FreeRTOS task with configurable stack, priority, and core affinity (`ESPTimerConfig`).
+- Pause, resume, toggle run status, clear, and query status per timer ID.
+- Thread-safe API so multiple tasks can schedule and control timers simultaneously.
 
-Features
-- `setTimeout` (one-shot), `setInterval` (periodic)
-- Counters: per-second, per-millisecond, per-minute with remaining time
-- Each timer type runs on its own FreeRTOS task
-- Pause, resume, toggle run status, clear, and status query per timer ID
-
-Quick Start
-- Include `#include <ESPTimer.h>`, create your own `ESPTimer` instance (global, static, or as a class member), and call `.init()` once (optionally with `ESPTimerConfig`).
-- Use the API similar to JS timers:
+## Examples
+Include the umbrella header, create an `ESPTimer` instance, and call `init` once:
 
 ```cpp
+#include <ESPTimer.h>
+
 ESPTimer timer;
 
-// Triggers once
-uint32_t id1 = timer.setTimeout([](){
-  Serial.println("1.5 sec is timed out!");
-}, 1500);
+void setup() {
+    Serial.begin(115200);
+    timer.init();
 
-// Retriggers every 1500ms
-uint32_t id2 = timer.setInterval([](){
-  Serial.println("1.5 sec is triggered!");
-}, 1500);
+    timer.setTimeout([](){
+        Serial.println("Fired once after 1.5 s");
+    }, 1500);
 
-// Called every sec for 10000 ms
-uint32_t id3 = timer.setSecCounter([](int secLeft){
-  Serial.printf("%d sec left so far\n", secLeft);
-}, 10000);
+    uint32_t intervalId = timer.setInterval([](){
+        Serial.println("1.5 s interval");
+    }, 1500);
 
-// Called every ms for 10000 ms
-uint32_t id4 = timer.setMsCounter([](uint32_t msLeft){
-  // msLeft can be high frequency; keep work light
-}, 10000);
+    timer.setSecCounter([](int secLeft){
+        Serial.printf("%d seconds remaining\n", secLeft);
+    }, 10000);
 
-// Called every min for 10000 ms
-uint32_t id5 = timer.setMinCounter([](int minLeft){
-  Serial.printf("%d min left so far\n", minLeft);
-}, 10000);
+    timer.setMsCounter([](uint32_t msLeft){
+        // Keep work super light inside ms counters
+    }, 1000);
 
-// Pause, resume, toggle, and clear
-timer.pauseInterval(id2);                         // Pauses if running
-timer.resumeInterval(id2);                        // Resumes if paused
-bool running = timer.toggleRunStatusInterval(id2); // Toggles; true if now running
-timer.clearInterval(id2);
+    timer.setMinCounter([](int minLeft){
+        Serial.printf("%d minutes remaining\n", minLeft);
+    }, 60000);
 
-// Status
-ESPTimerStatus status = timer.getStatus(id1);
+    timer.pauseInterval(intervalId);
+    timer.resumeInterval(intervalId);
+}
+
+void loop() {}
 ```
 
-Notes
-- `pause*` only pauses (idempotent). Use `resume*` to resume, or `toggleRunStatus*` to toggle (returns `true` if now running).
-- `setMsCounter` can be CPU intensive; use sparingly and keep callbacks very light.
-- Each type uses its own FreeRTOS task. Configure stack, priority, and core with `ESPTimerConfig`.
-- Need multiple timer managers? Instantiate as many `ESPTimer` objects as required; each keeps its own FreeRTOS tasks and mutex.
+Explore `examples/Basic/Basic.ino` for a complete sketch that demonstrates all timer types.
 
-See `examples/Basic/Basic.ino` for a complete sketch.
+## Gotchas
+- `setMsCounter` wakes every millisecond; keep callbacks trivial or they will starve other work.
+- `pause*` calls are idempotent and only transition `Running → Paused`. Use the matching `resume*` or `toggleRunStatus*` helpers to continue.
+- Each timer type owns its own FreeRTOS task. Tune `ESPTimerConfig` when you need larger stacks or different priorities.
+- IDs are unique per `ESPTimer` instance. Clearing a timer frees the ID; reusing stale IDs after `clear*` will fail.
+
+## API Reference
+- `void init(const ESPTimerConfig& cfg = {})` – allocate mutexes and spawn each timer task with the provided stack/priority/core settings.
+- Scheduling helpers
+  - `uint32_t setTimeout(std::function<void()> cb, uint32_t delayMs)`
+  - `uint32_t setInterval(std::function<void()> cb, uint32_t periodMs)`
+  - `uint32_t setSecCounter(std::function<void(int)> cb, uint32_t totalMs)`
+  - `uint32_t setMsCounter(std::function<void(uint32_t)> cb, uint32_t totalMs)`
+  - `uint32_t setMinCounter(std::function<void(int)> cb, uint32_t totalMs)`
+- Control helpers: `pause*`, `resume*`, `toggleRunStatus*`, `clear*`, `ESPTimerStatus getStatus(id)`.
+
+`ESPTimerConfig` knobs (per task type):
+- Stack sizes (`stack_size_timeout`, `stack_size_interval`, `stack_size_sec`, `stack_size_ms`, `stack_size_min`).
+- Priorities (`priority_timeout`, …).
+- Core affinity (`core_*`, `-1` = no pin).
+
+`ESPTimerStatus` reports `Invalid`, `Running`, `Paused`, `Stopped`, or `Completed`.
+
+## Restrictions
+- Designed for ESP32 boards where FreeRTOS is available (Arduino-ESP32 or ESP-IDF). Other MCUs are untested.
+- Requires C++17 due to heavy use of `std::function` and lambdas.
+- Each timer type consumes its own FreeRTOS task + stack memory—factor that into your RAM budget when enabling multiple counters.
+
+## Tests
+Unity-based smoke tests live in `test/test_basic`. Drop the folder into your PlatformIO workspace (or add your own `platformio.ini` at the repo root) and run `pio test -e esp32dev` against an ESP32 dev kit. The test harness is Arduino friendly and exercises every timer type.
+
+## License
+MIT — see [LICENSE.md](LICENSE.md).
 
 ## ESPToolKit
-
-- Check out other libraries under ESPToolKit: https://github.com/orgs/ESPToolKit/repositories
-- Join our discord server at: https://discord.gg/WG8sSqAy
-- If you like the libraries, you can support me at: https://ko-fi.com/esptoolkit
+- Check out other libraries: <https://github.com/orgs/ESPToolKit/repositories>
+- Hang out on Discord: <https://discord.gg/WG8sSqAy>
+- Support the project: <https://ko-fi.com/esptoolkit>

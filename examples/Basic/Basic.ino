@@ -2,6 +2,8 @@
 #include <Arduino.h>
 #include <ESPTimer.h>
 
+ESPTimer timer;  // Create your own instance
+
 void setup() {
   Serial.begin(115200);
   delay(500);

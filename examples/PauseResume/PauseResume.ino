@@ -2,6 +2,8 @@
 #include <Arduino.h>
 #include <ESPTimer.h>
 
+ESPTimer timer;
+
 uint32_t intervalId;
 
 void setup() {

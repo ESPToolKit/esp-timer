@@ -2,6 +2,8 @@
 #include <unity.h>
 #include <ESPTimer.h>
 
+static ESPTimer timer;
+
 void test_api_compiles() {
   ESPTimerConfig cfg;
   timer.init(cfg);

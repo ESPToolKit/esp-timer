@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <functional>
 #include <vector>
+#include <atomic>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/semphr.h>
@@ -41,7 +42,11 @@ struct ESPTimerConfig {
 
 class ESPTimer {
  public:
+  ~ESPTimer();
+
   void init(const ESPTimerConfig& cfg = ESPTimerConfig());
+  void deinit();
+  bool initialized() const { return initialized_; }
 
   // Scheduling
   uint32_t setTimeout(std::function<void()> cb, uint32_t delayMs);
@@ -137,6 +142,7 @@ class ESPTimer {
 
   ESPTimerConfig cfg_{};
   bool initialized_ = false;
+  std::atomic<bool> running_{false};
   uint32_t nextId_ = 1;
 
   uint32_t nextId();

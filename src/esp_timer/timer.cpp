@@ -3,6 +3,41 @@
 #include <algorithm>
 #include <type_traits>
 
+ESPTimer::~ESPTimer() {
+  deinit();
+}
+
+void ESPTimer::deinit() {
+  if (!initialized_) return;
+
+  running_.store(false, std::memory_order_release);
+
+  auto waitForTaskExit = [&](TaskHandle_t& handle) {
+    while (handle) {
+      vTaskDelay(pdMS_TO_TICKS(1));
+    }
+  };
+
+  waitForTaskExit(hTimeout_);
+  waitForTaskExit(hInterval_);
+  waitForTaskExit(hSec_);
+  waitForTaskExit(hMs_);
+  waitForTaskExit(hMin_);
+
+  timeouts_.clear();
+  intervals_.clear();
+  secs_.clear();
+  mss_.clear();
+  mins_.clear();
+
+  if (mutex_) {
+    vSemaphoreDelete(mutex_);
+    mutex_ = nullptr;
+  }
+
+  initialized_ = false;
+}
+
 // Internal lock utilities
 void ESPTimer::lock() {
   if (mutex_) {
@@ -30,6 +65,8 @@ void ESPTimer::init(const ESPTimerConfig& cfg) {
   if (!mutex_) {
     mutex_ = xSemaphoreCreateMutex();
   }
+
+  running_.store(true, std::memory_order_release);
 
   auto createTask = [&](TaskFunction_t fn, const char* name, uint16_t stack, UBaseType_t prio,
                         TaskHandle_t* handle, int8_t core) {
@@ -340,7 +377,7 @@ void ESPTimer::minTaskTrampoline(void* arg) { static_cast<ESPTimer*>(arg)->minTa
 
 // Task loops
 void ESPTimer::timeoutTask() {
-  for (;;) {
+  while (running_.load(std::memory_order_acquire)) {
     const uint32_t now = millis();
     std::vector<std::function<void()>> toCall;
 
@@ -365,10 +402,12 @@ void ESPTimer::timeoutTask() {
 
     vTaskDelay(pdMS_TO_TICKS(1));
   }
+  hTimeout_ = nullptr;
+  vTaskDelete(nullptr);
 }
 
 void ESPTimer::intervalTask() {
-  for (;;) {
+  while (running_.load(std::memory_order_acquire)) {
     const uint32_t now = millis();
     std::vector<std::function<void()>> toCall;
 
@@ -394,10 +433,12 @@ void ESPTimer::intervalTask() {
 
     vTaskDelay(pdMS_TO_TICKS(1));
   }
+  hInterval_ = nullptr;
+  vTaskDelete(nullptr);
 }
 
 void ESPTimer::secTask() {
-  for (;;) {
+  while (running_.load(std::memory_order_acquire)) {
     const uint32_t now = millis();
     struct Call { std::function<void(int)> fn; int arg; };
     std::vector<Call> toCall;
@@ -432,10 +473,12 @@ void ESPTimer::secTask() {
 
     vTaskDelay(pdMS_TO_TICKS(10));
   }
+  hSec_ = nullptr;
+  vTaskDelete(nullptr);
 }
 
 void ESPTimer::msTask() {
-  for (;;) {
+  while (running_.load(std::memory_order_acquire)) {
     const uint32_t now = millis();
     struct Call { std::function<void(uint32_t)> fn; uint32_t arg; };
     std::vector<Call> toCall;
@@ -467,10 +510,12 @@ void ESPTimer::msTask() {
 
     vTaskDelay(pdMS_TO_TICKS(1));
   }
+  hMs_ = nullptr;
+  vTaskDelete(nullptr);
 }
 
 void ESPTimer::minTask() {
-  for (;;) {
+  while (running_.load(std::memory_order_acquire)) {
     const uint32_t now = millis();
     struct Call { std::function<void(int)> fn; int arg; };
     std::vector<Call> toCall;
@@ -505,4 +550,6 @@ void ESPTimer::minTask() {
 
     vTaskDelay(pdMS_TO_TICKS(100));
   }
+  hMin_ = nullptr;
+  vTaskDelete(nullptr);
 }

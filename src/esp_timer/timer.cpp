@@ -46,11 +46,11 @@ void ESPTimer::init(const ESPTimerConfig& cfg) {
     (void)ok; // avoid warning in non-assert builds
   };
 
-  createTask(timeoutTaskTrampoline, "ESPTmrTimeout", cfg_.stack_size_timeout, cfg_.priority_timeout, &hTimeout_, cfg_.core_timeout);
-  createTask(intervalTaskTrampoline, "ESPTmrInterval", cfg_.stack_size_interval, cfg_.priority_interval, &hInterval_, cfg_.core_interval);
-  createTask(secTaskTrampoline, "ESPTmrSec", cfg_.stack_size_sec, cfg_.priority_sec, &hSec_, cfg_.core_sec);
-  createTask(msTaskTrampoline, "ESPTmrMs", cfg_.stack_size_ms, cfg_.priority_ms, &hMs_, cfg_.core_ms);
-  createTask(minTaskTrampoline, "ESPTmrMin", cfg_.stack_size_min, cfg_.priority_min, &hMin_, cfg_.core_min);
+  createTask(timeoutTaskTrampoline, "ESPTmrTimeout", cfg_.stackSizeTimeout, cfg_.priorityTimeout, &hTimeout_, cfg_.coreTimeout);
+  createTask(intervalTaskTrampoline, "ESPTmrInterval", cfg_.stackSizeInterval, cfg_.priorityInterval, &hInterval_, cfg_.coreInterval);
+  createTask(secTaskTrampoline, "ESPTmrSec", cfg_.stackSizeSec, cfg_.prioritySec, &hSec_, cfg_.coreSec);
+  createTask(msTaskTrampoline, "ESPTmrMs", cfg_.stackSizeMs, cfg_.priorityMs, &hMs_, cfg_.coreMs);
+  createTask(minTaskTrampoline, "ESPTmrMin", cfg_.stackSizeMin, cfg_.priorityMin, &hMin_, cfg_.coreMin);
 
   initialized_ = true;
 }

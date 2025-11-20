@@ -72,11 +72,13 @@ Explore `examples/Basic/Basic.ino` for a complete sketch that demonstrates all t
 - Control helpers: `pause*`, `resume*`, `toggleRunStatus*`, `clear*`, `ESPTimerStatus getStatus(id)`.
 
 `ESPTimerConfig` knobs (per task type):
-- Stack sizes (`stack_size_timeout`, `stack_size_interval`, `stack_size_sec`, `stack_size_ms`, `stack_size_min`).
-- Priorities (`priority_timeout`, …).
-- Core affinity (`core_*`, `-1` = no pin).
+- Stack sizes (`stackSizeTimeout`, `stackSizeInterval`, `stackSizeSec`, `stackSizeMs`, `stackSizeMin`).
+- Priorities (`priorityTimeout`, …).
+- Core affinity (`core*`, `-1` = no pin).
 
 `ESPTimerStatus` reports `Invalid`, `Running`, `Paused`, `Stopped`, or `Completed`.
+
+Stack sizes are expressed in bytes.
 
 ## Restrictions
 - Designed for ESP32 boards where FreeRTOS is available (Arduino-ESP32 or ESP-IDF). Other MCUs are untested.

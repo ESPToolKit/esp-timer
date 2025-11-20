@@ -17,26 +17,26 @@ enum class ESPTimerStatus : uint8_t {
 };
 
 struct ESPTimerConfig {
-  // Stack sizes per task type (in words on ESP-IDF, bytes on Arduino build)
-  uint16_t stack_size_timeout = 4096;
-  uint16_t stack_size_interval = 4096;
-  uint16_t stack_size_sec = 4096;
-  uint16_t stack_size_ms = 4096;
-  uint16_t stack_size_min = 4096;
+  // Stack sizes per task type (bytes)
+  uint16_t stackSizeTimeout = 4096 * sizeof(StackType_t);
+  uint16_t stackSizeInterval = 4096 * sizeof(StackType_t);
+  uint16_t stackSizeSec = 4096 * sizeof(StackType_t);
+  uint16_t stackSizeMs = 4096 * sizeof(StackType_t);
+  uint16_t stackSizeMin = 4096 * sizeof(StackType_t);
 
   // Priorities per task
-  UBaseType_t priority_timeout = 1;
-  UBaseType_t priority_interval = 1;
-  UBaseType_t priority_sec = 1;
-  UBaseType_t priority_ms = 2;   // default slightly higher as it wakes up more often
-  UBaseType_t priority_min = 1;
+  UBaseType_t priorityTimeout = 1;
+  UBaseType_t priorityInterval = 1;
+  UBaseType_t prioritySec = 1;
+  UBaseType_t priorityMs = 2;   // default slightly higher as it wakes up more often
+  UBaseType_t priorityMin = 1;
 
   // Core affinity (-1 means no pin/any core)
-  int8_t core_timeout = -1;
-  int8_t core_interval = -1;
-  int8_t core_sec = -1;
-  int8_t core_ms = -1;
-  int8_t core_min = -1;
+  int8_t coreTimeout = -1;
+  int8_t coreInterval = -1;
+  int8_t coreSec = -1;
+  int8_t coreMs = -1;
+  int8_t coreMin = -1;
 };
 
 class ESPTimer {

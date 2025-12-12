@@ -15,7 +15,7 @@ The format follows Keep a Changelog and the project adheres to Semantic Versioni
 - Added an MIT license badge and cross-links to other ESPToolKit libraries in the README.
 - Removed the outdated note about API sugar helpers from the roadmap.
 
-## [1.0.0] - 2025-09-16
+## [1.0.0] - 2025-09-25
 ### Added
 - Introduced the FreeRTOS-backed `ESPTimer` API with `init`, `setTimeout`, `setInterval`, and per-second/millisecond/minute countdown helpers.
 - Added lifecycle controls (`pause*`, `resume*`, `toggleRunStatus*`, `clear*`, `getStatus`) and the `ESPTimerStatus` state machine for inspecting individual timers.

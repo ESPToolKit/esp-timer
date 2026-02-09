@@ -77,6 +77,8 @@ class ESPTimer {
   bool toggleRunStatusMinCounter(uint32_t id);
 
   // Clear (stop and remove) timers; returns true on success
+  bool clearTimeout(uint32_t id);
+  // Backward-compatible alias for clearTimeout
   bool clearTimer(uint32_t id);
   bool clearInterval(uint32_t id);
   bool clearSecCounter(uint32_t id);

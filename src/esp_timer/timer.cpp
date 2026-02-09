@@ -351,7 +351,8 @@ bool ESPTimer::toggleRunStatusMinCounter(uint32_t id) {
   return togglePause(Type::Min, id) == ESPTimerStatus::Running;
 }
 
-bool ESPTimer::clearTimer(uint32_t id) { return clearItem(Type::Timeout, id); }
+bool ESPTimer::clearTimeout(uint32_t id) { return clearItem(Type::Timeout, id); }
+bool ESPTimer::clearTimer(uint32_t id) { return clearTimeout(id); }
 bool ESPTimer::clearInterval(uint32_t id) { return clearItem(Type::Interval, id); }
 bool ESPTimer::clearSecCounter(uint32_t id) { return clearItem(Type::Sec, id); }
 bool ESPTimer::clearMsCounter(uint32_t id) { return clearItem(Type::Ms, id); }

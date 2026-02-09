@@ -7,6 +7,7 @@ The format follows Keep a Changelog and the project adheres to Semantic Versioni
 ## [Unreleased]
 ### Changed
 - Removed the library-provided inline `timer` instance. Sketches should now declare their own `ESPTimer` objects (global, static, or as class members) before calling `init()`, enabling multiple independent timer managers.
+- Added `clearTimeout(id)` for explicit timeout cancellation and kept `clearTimer(id)` as a backward-compatible alias.
 
 ### Fixed
 - Ensured per-second and per-minute countdown timers emit their final tick by rounding up remaining time.

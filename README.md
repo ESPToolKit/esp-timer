@@ -70,6 +70,8 @@ Explore `examples/Basic/Basic.ino` for a complete sketch that demonstrates all t
   - `uint32_t setMsCounter(std::function<void(uint32_t)> cb, uint32_t totalMs)`
   - `uint32_t setMinCounter(std::function<void(int)> cb, uint32_t totalMs)`
 - Control helpers: `pause*`, `resume*`, `toggleRunStatus*`, `clear*`, `ESPTimerStatus getStatus(id)`.
+  - Timeout-specific clear: `clearTimeout(id)`.
+  - Backward-compatible alias: `clearTimer(id)` (same behavior as `clearTimeout(id)`).
 
 `ESPTimerConfig` knobs (per task type):
 - Stack sizes (`stackSizeTimeout`, `stackSizeInterval`, `stackSizeSec`, `stackSizeMs`, `stackSizeMin`).

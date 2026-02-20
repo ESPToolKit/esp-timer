@@ -12,10 +12,13 @@ void ESPTimer::deinit() {
 
   running_.store(false, std::memory_order_release);
 
-  auto waitForTaskExit = [&](TaskHandle_t& handle) {
-    while (handle) {
-      vTaskDelay(pdMS_TO_TICKS(1));
+  auto waitForTaskExit = [](std::shared_ptr<WorkerHandler>& handle) {
+    if (!handle) {
+      return;
     }
+    (void)handle->wait(pdMS_TO_TICKS(500));
+    (void)handle->destroy();
+    handle.reset();
   };
 
   waitForTaskExit(hTimeout_);
@@ -34,6 +37,7 @@ void ESPTimer::deinit() {
     vSemaphoreDelete(mutex_);
     mutex_ = nullptr;
   }
+  worker_.deinit();
 
   initialized_ = false;
 }
@@ -79,27 +83,35 @@ void ESPTimer::init(const ESPTimerConfig& cfg) {
   }
 
   running_.store(true, std::memory_order_release);
+  ESPWorker::Config workerConfig{};
+  workerConfig.maxWorkers = 5;
+  workerConfig.enableExternalStacks = true;
+  worker_.init(workerConfig);
 
-  auto createTask = [&](TaskFunction_t fn, const char* name, uint16_t stack, UBaseType_t prio,
-                        TaskHandle_t* handle, int8_t core) {
-    BaseType_t ok;
-#if defined(ARDUINO_ARCH_ESP32)
-    if (core >= 0) {
-      ok = xTaskCreatePinnedToCore(fn, name, stack, this, prio, handle, core);
+  auto createTask = [&](std::function<void()> fn,
+                        const char* name,
+                        uint16_t stack,
+                        UBaseType_t prio,
+                        int8_t core,
+                        std::shared_ptr<WorkerHandler>& handle) {
+    WorkerConfig taskConfig{};
+    taskConfig.name = name ? name : "ESPTimerTask";
+    taskConfig.stackSizeBytes = stack;
+    taskConfig.priority = prio;
+    taskConfig.coreId = core < 0 ? tskNO_AFFINITY : static_cast<BaseType_t>(core);
+    WorkerResult result = usePSRAMBuffers_ ? worker_.spawnExt(fn, taskConfig) : worker_.spawn(fn, taskConfig);
+    if (result) {
+      handle = result.handler;
     } else {
-      ok = xTaskCreate(fn, name, stack, this, prio, handle);
+      handle.reset();
     }
-#else
-    ok = xTaskCreate(fn, name, stack, this, prio, handle);
-#endif
-    (void)ok; // avoid warning in non-assert builds
   };
 
-  createTask(timeoutTaskTrampoline, "ESPTmrTimeout", cfg_.stackSizeTimeout, cfg_.priorityTimeout, &hTimeout_, cfg_.coreTimeout);
-  createTask(intervalTaskTrampoline, "ESPTmrInterval", cfg_.stackSizeInterval, cfg_.priorityInterval, &hInterval_, cfg_.coreInterval);
-  createTask(secTaskTrampoline, "ESPTmrSec", cfg_.stackSizeSec, cfg_.prioritySec, &hSec_, cfg_.coreSec);
-  createTask(msTaskTrampoline, "ESPTmrMs", cfg_.stackSizeMs, cfg_.priorityMs, &hMs_, cfg_.coreMs);
-  createTask(minTaskTrampoline, "ESPTmrMin", cfg_.stackSizeMin, cfg_.priorityMin, &hMin_, cfg_.coreMin);
+  createTask([this]() { timeoutTask(); }, "ESPTmrTimeout", cfg_.stackSizeTimeout, cfg_.priorityTimeout, cfg_.coreTimeout, hTimeout_);
+  createTask([this]() { intervalTask(); }, "ESPTmrInterval", cfg_.stackSizeInterval, cfg_.priorityInterval, cfg_.coreInterval, hInterval_);
+  createTask([this]() { secTask(); }, "ESPTmrSec", cfg_.stackSizeSec, cfg_.prioritySec, cfg_.coreSec, hSec_);
+  createTask([this]() { msTask(); }, "ESPTmrMs", cfg_.stackSizeMs, cfg_.priorityMs, cfg_.coreMs, hMs_);
+  createTask([this]() { minTask(); }, "ESPTmrMin", cfg_.stackSizeMin, cfg_.priorityMin, cfg_.coreMin, hMin_);
 
   initialized_ = true;
 }
@@ -416,8 +428,6 @@ void ESPTimer::timeoutTask() {
 
     vTaskDelay(pdMS_TO_TICKS(1));
   }
-  hTimeout_ = nullptr;
-  vTaskDelete(nullptr);
 }
 
 void ESPTimer::intervalTask() {
@@ -448,8 +458,6 @@ void ESPTimer::intervalTask() {
 
     vTaskDelay(pdMS_TO_TICKS(1));
   }
-  hInterval_ = nullptr;
-  vTaskDelete(nullptr);
 }
 
 void ESPTimer::secTask() {
@@ -489,8 +497,6 @@ void ESPTimer::secTask() {
 
     vTaskDelay(pdMS_TO_TICKS(10));
   }
-  hSec_ = nullptr;
-  vTaskDelete(nullptr);
 }
 
 void ESPTimer::msTask() {
@@ -527,8 +533,6 @@ void ESPTimer::msTask() {
 
     vTaskDelay(pdMS_TO_TICKS(1));
   }
-  hMs_ = nullptr;
-  vTaskDelete(nullptr);
 }
 
 void ESPTimer::minTask() {
@@ -568,6 +572,4 @@ void ESPTimer::minTask() {
 
     vTaskDelay(pdMS_TO_TICKS(100));
   }
-  hMin_ = nullptr;
-  vTaskDelete(nullptr);
 }

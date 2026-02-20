@@ -10,7 +10,7 @@ Lightweight JS-like timers for ESP32 with non-blocking FreeRTOS tasks. ESPTimer 
 ## Features
 - `setTimeout` (one-shot) and `setInterval` (periodic) helpers with numeric IDs.
 - Counter helpers: per-second, per-millisecond, and per-minute callbacks with remaining time.
-- Each timer type runs on its own worker task managed by `ESPWorker`, with configurable stack, priority, and core affinity (`ESPTimerConfig`).
+- Each timer type runs on its own FreeRTOS task, with configurable stack, priority, and core affinity (`ESPTimerConfig`).
 - Pause, resume, toggle run status, clear, and query status per timer ID.
 - Thread-safe API so multiple tasks can schedule and control timers simultaneously.
 

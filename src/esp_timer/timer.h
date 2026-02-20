@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Arduino.h>
-#include <ESPWorker.h>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -143,12 +142,11 @@ class ESPTimer {
 
   // FreeRTOS bits
   SemaphoreHandle_t mutex_ = nullptr;
-  ESPWorker worker_{};
-  std::shared_ptr<WorkerHandler> hTimeout_{};
-  std::shared_ptr<WorkerHandler> hInterval_{};
-  std::shared_ptr<WorkerHandler> hSec_{};
-  std::shared_ptr<WorkerHandler> hMs_{};
-  std::shared_ptr<WorkerHandler> hMin_{};
+  TaskHandle_t hTimeout_ = nullptr;
+  TaskHandle_t hInterval_ = nullptr;
+  TaskHandle_t hSec_ = nullptr;
+  TaskHandle_t hMs_ = nullptr;
+  TaskHandle_t hMin_ = nullptr;
 
   ESPTimerConfig cfg_{};
   bool initialized_ = false;

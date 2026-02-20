@@ -60,6 +60,7 @@ Explore `examples/Basic/Basic.ino` for a complete sketch that demonstrates all t
 - `pause*` calls are idempotent and only transition `Running → Paused`. Use the matching `resume*` or `toggleRunStatus*` helpers to continue.
 - Each timer type owns its own FreeRTOS task. Tune `ESPTimerConfig` when you need larger stacks or different priorities.
 - IDs are unique per `ESPTimer` instance. Clearing a timer frees the ID; reusing stale IDs after `clear*` will fail.
+- `usePSRAMBuffers = true` is best-effort for timer-owned dynamic buffers. If PSRAM is unavailable, allocation falls back to normal heap automatically.
 
 ## API Reference
 - `void init(const ESPTimerConfig& cfg = {})` – allocate mutexes and spawn each timer task with the provided stack/priority/core settings.
@@ -77,6 +78,9 @@ Explore `examples/Basic/Basic.ino` for a complete sketch that demonstrates all t
 - Stack sizes (`stackSizeTimeout`, `stackSizeInterval`, `stackSizeSec`, `stackSizeMs`, `stackSizeMin`).
 - Priorities (`priorityTimeout`, …).
 - Core affinity (`core*`, `-1` = no pin).
+- Buffer policy (`usePSRAMBuffers`) for timer-owned vectors and callback dispatch staging buffers.
+
+`usePSRAMBuffers` only affects allocations owned by ESPTimer. Callback captures (`std::function`) can still allocate outside this policy depending on capture size and STL behavior.
 
 `ESPTimerStatus` reports `Invalid`, `Running`, `Paused`, `Stopped`, or `Completed`.
 

@@ -61,6 +61,18 @@ uint32_t ESPTimer::nextId() {
 void ESPTimer::init(const ESPTimerConfig& cfg) {
   if (initialized_) return;
   cfg_ = cfg;
+  usePSRAMBuffers_ = cfg_.usePSRAMBuffers;
+
+  TimerVector<TimeoutItem> timeoutStorage{TimerAllocator<TimeoutItem>(usePSRAMBuffers_)};
+  timeouts_.swap(timeoutStorage);
+  TimerVector<IntervalItem> intervalStorage{TimerAllocator<IntervalItem>(usePSRAMBuffers_)};
+  intervals_.swap(intervalStorage);
+  TimerVector<SecItem> secStorage{TimerAllocator<SecItem>(usePSRAMBuffers_)};
+  secs_.swap(secStorage);
+  TimerVector<MsItem> msStorage{TimerAllocator<MsItem>(usePSRAMBuffers_)};
+  mss_.swap(msStorage);
+  TimerVector<MinItem> minStorage{TimerAllocator<MinItem>(usePSRAMBuffers_)};
+  mins_.swap(minStorage);
 
   if (!mutex_) {
     mutex_ = xSemaphoreCreateMutex();
@@ -380,9 +392,10 @@ void ESPTimer::minTaskTrampoline(void* arg) { static_cast<ESPTimer*>(arg)->minTa
 void ESPTimer::timeoutTask() {
   while (running_.load(std::memory_order_acquire)) {
     const uint32_t now = millis();
-    std::vector<std::function<void()>> toCall;
+    TimerVector<std::function<void()>> toCall{TimerAllocator<std::function<void()>>(usePSRAMBuffers_)};
 
     lock();
+    toCall.reserve(timeouts_.size());
     // Collect callbacks due and remove completed
     auto it = timeouts_.begin();
     while (it != timeouts_.end()) {
@@ -410,9 +423,10 @@ void ESPTimer::timeoutTask() {
 void ESPTimer::intervalTask() {
   while (running_.load(std::memory_order_acquire)) {
     const uint32_t now = millis();
-    std::vector<std::function<void()>> toCall;
+    TimerVector<std::function<void()>> toCall{TimerAllocator<std::function<void()>>(usePSRAMBuffers_)};
 
     lock();
+    toCall.reserve(intervals_.size());
     for (auto& it : intervals_) {
       if (it.status == ESPTimerStatus::Running) {
         if (now - it.lastFireMs >= it.periodMs) {
@@ -442,9 +456,10 @@ void ESPTimer::secTask() {
   while (running_.load(std::memory_order_acquire)) {
     const uint32_t now = millis();
     struct Call { std::function<void(int)> fn; int arg; };
-    std::vector<Call> toCall;
+    TimerVector<Call> toCall{TimerAllocator<Call>(usePSRAMBuffers_)};
 
     lock();
+    toCall.reserve(secs_.size());
     for (auto& it : secs_) {
       if (it.status == ESPTimerStatus::Running) {
         if (now - it.lastTickMs >= 1000) {
@@ -482,9 +497,10 @@ void ESPTimer::msTask() {
   while (running_.load(std::memory_order_acquire)) {
     const uint32_t now = millis();
     struct Call { std::function<void(uint32_t)> fn; uint32_t arg; };
-    std::vector<Call> toCall;
+    TimerVector<Call> toCall{TimerAllocator<Call>(usePSRAMBuffers_)};
 
     lock();
+    toCall.reserve(mss_.size());
     for (auto& it : mss_) {
       if (it.status == ESPTimerStatus::Running) {
         // Fire at ~1ms cadence; on busy systems it may be coarser
@@ -519,9 +535,10 @@ void ESPTimer::minTask() {
   while (running_.load(std::memory_order_acquire)) {
     const uint32_t now = millis();
     struct Call { std::function<void(int)> fn; int arg; };
-    std::vector<Call> toCall;
+    TimerVector<Call> toCall{TimerAllocator<Call>(usePSRAMBuffers_)};
 
     lock();
+    toCall.reserve(mins_.size());
     for (auto& it : mins_) {
       if (it.status == ESPTimerStatus::Running) {
         if (now - it.lastTickMs >= 60000) {

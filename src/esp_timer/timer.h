@@ -7,6 +7,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/semphr.h>
+#include "timer_allocator.h"
 
 // Public types
 enum class ESPTimerStatus : uint8_t {
@@ -38,6 +39,10 @@ struct ESPTimerConfig {
   int8_t coreSec = -1;
   int8_t coreMs = -1;
   int8_t coreMin = -1;
+
+  // Prefer PSRAM-backed buffers for timer-owned dynamic containers.
+  // Falls back to default heap automatically when unavailable.
+  bool usePSRAMBuffers = false;
 };
 
 class ESPTimer {
@@ -128,11 +133,11 @@ class ESPTimer {
   };
 
   // Storage per type
-  std::vector<TimeoutItem> timeouts_;
-  std::vector<IntervalItem> intervals_;
-  std::vector<SecItem> secs_;
-  std::vector<MsItem> mss_;
-  std::vector<MinItem> mins_;
+  TimerVector<TimeoutItem> timeouts_;
+  TimerVector<IntervalItem> intervals_;
+  TimerVector<SecItem> secs_;
+  TimerVector<MsItem> mss_;
+  TimerVector<MinItem> mins_;
 
   // FreeRTOS bits
   SemaphoreHandle_t mutex_ = nullptr;
@@ -146,6 +151,7 @@ class ESPTimer {
   bool initialized_ = false;
   std::atomic<bool> running_{false};
   uint32_t nextId_ = 1;
+  bool usePSRAMBuffers_ = false;
 
   uint32_t nextId();
   void lock();

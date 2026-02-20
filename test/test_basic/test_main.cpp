@@ -6,6 +6,7 @@ ESPTimer timer;
 
 void test_api_compiles() {
     ESPTimerConfig cfg;
+    cfg.usePSRAMBuffers = true;
     timer.init(cfg);
 
     auto id1 = timer.setTimeout([]() {}, 1000);

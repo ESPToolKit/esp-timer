@@ -78,6 +78,18 @@ jobs:
           arduino-cli core update-index
           arduino-cli core install esp32:esp32
 
+      - name: Install libraries
+        run: |
+          arduino-cli lib update-index
+          if [ ! -d "${HOME}/Arduino/libraries/ESPBufferManager" ]; then
+            arduino-cli lib install --git-url https://github.com/ESPToolKit/esp-buffer-manager.git || \
+              git clone --depth 1 https://github.com/ESPToolKit/esp-buffer-manager.git "${HOME}/Arduino/libraries/ESPBufferManager"
+          fi
+          if [ ! -d "${HOME}/Arduino/libraries/ESPWorker" ]; then
+            arduino-cli lib install --git-url https://github.com/ESPToolKit/esp-worker.git || \
+              git clone --depth 1 https://github.com/ESPToolKit/esp-worker.git "${HOME}/Arduino/libraries/ESPWorker"
+          fi
+
       - name: Add local library to sketchbook
         run: |
           set -e

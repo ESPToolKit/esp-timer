@@ -21,6 +21,7 @@ Include the umbrella header, create an `ESPTimer` instance, and call `init` once
 #include <ESPTimer.h>
 
 ESPTimer timer;
+volatile bool shouldShutdownTimers = false;
 
 void setup() {
     Serial.begin(115200);
@@ -48,9 +49,18 @@ void setup() {
 
     timer.pauseInterval(intervalId);
     timer.resumeInterval(intervalId);
+
+    timer.setTimeout([](){
+        shouldShutdownTimers = true;
+    }, 30000);
 }
 
-void loop() {}
+void loop() {
+    if (shouldShutdownTimers && timer.isInitialized()) {
+        timer.deinit();
+        shouldShutdownTimers = false;
+    }
+}
 ```
 
 Explore `examples/Basic/Basic.ino` for a complete sketch that demonstrates all timer types.
@@ -64,6 +74,8 @@ Explore `examples/Basic/Basic.ino` for a complete sketch that demonstrates all t
 
 ## API Reference
 - `void init(const ESPTimerConfig& cfg = {})` – allocate mutexes and spawn each timer worker with the provided stack/priority/core settings.
+- `void deinit()` – idempotently stop all timer workers, clear active timers/counters, and free runtime resources.
+- `bool isInitialized() const` – `true` when timer workers and synchronization primitives are active.
 - Scheduling helpers
   - `uint32_t setTimeout(std::function<void()> cb, uint32_t delayMs)`
   - `uint32_t setInterval(std::function<void()> cb, uint32_t periodMs)`
@@ -72,7 +84,6 @@ Explore `examples/Basic/Basic.ino` for a complete sketch that demonstrates all t
   - `uint32_t setMinCounter(std::function<void(int)> cb, uint32_t totalMs)`
 - Control helpers: `pause*`, `resume*`, `toggleRunStatus*`, `clear*`, `ESPTimerStatus getStatus(id)`.
   - Timeout-specific clear: `clearTimeout(id)`.
-  - Backward-compatible alias: `clearTimer(id)` (same behavior as `clearTimeout(id)`).
 
 `ESPTimerConfig` knobs (per task type):
 - Stack sizes (`stackSizeTimeout`, `stackSizeInterval`, `stackSizeSec`, `stackSizeMs`, `stackSizeMin`).

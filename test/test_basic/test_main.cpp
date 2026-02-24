@@ -2,12 +2,12 @@
 #include <ESPTimer.h>
 #include <unity.h>
 
-ESPTimer timer;
-
 void test_api_compiles() {
+    ESPTimer timer;
     ESPTimerConfig cfg;
     cfg.usePSRAMBuffers = true;
     timer.init(cfg);
+    TEST_ASSERT_TRUE(timer.isInitialized());
 
     auto id1 = timer.setTimeout([]() {}, 1000);
     auto id2 = timer.setInterval([]() {}, 20);
@@ -34,16 +34,54 @@ void test_api_compiles() {
     TEST_ASSERT_TRUE(running);
 
     TEST_ASSERT_TRUE(timer.clearTimeout(id1));
-    TEST_ASSERT_TRUE(timer.clearTimer(id6));
+    TEST_ASSERT_TRUE(timer.clearTimeout(id6));
 
     // Clear should return true once
     TEST_ASSERT_TRUE(timer.clearInterval(id2));
+
+    timer.deinit();
+    TEST_ASSERT_FALSE(timer.isInitialized());
+}
+
+void test_deinit_pre_init_is_safe_and_idempotent() {
+    ESPTimer timer;
+
+    TEST_ASSERT_FALSE(timer.isInitialized());
+    timer.deinit();
+    TEST_ASSERT_FALSE(timer.isInitialized());
+    timer.deinit();
+    TEST_ASSERT_FALSE(timer.isInitialized());
+}
+
+void test_reinit_lifecycle() {
+    ESPTimer timer;
+
+    timer.init();
+    TEST_ASSERT_TRUE(timer.isInitialized());
+    auto firstId = timer.setTimeout([]() {}, 5);
+    TEST_ASSERT_TRUE(firstId > 0);
+
+    timer.deinit();
+    TEST_ASSERT_FALSE(timer.isInitialized());
+    timer.deinit();
+    TEST_ASSERT_FALSE(timer.isInitialized());
+
+    timer.init();
+    TEST_ASSERT_TRUE(timer.isInitialized());
+    auto secondId = timer.setInterval([]() {}, 5);
+    TEST_ASSERT_TRUE(secondId > 0);
+    TEST_ASSERT_TRUE(timer.clearInterval(secondId));
+
+    timer.deinit();
+    TEST_ASSERT_FALSE(timer.isInitialized());
 }
 
 void setup() {
     delay(2000);
     UNITY_BEGIN();
     RUN_TEST(test_api_compiles);
+    RUN_TEST(test_deinit_pre_init_is_safe_and_idempotent);
+    RUN_TEST(test_reinit_lifecycle);
     UNITY_END();
 }
 

@@ -52,7 +52,7 @@ class ESPTimer {
 
   void init(const ESPTimerConfig& cfg = ESPTimerConfig());
   void deinit();
-  bool initialized() const { return initialized_; }
+  bool isInitialized() const { return initialized_; }
 
   // Scheduling
   uint32_t setTimeout(std::function<void()> cb, uint32_t delayMs);
@@ -84,8 +84,6 @@ class ESPTimer {
 
   // Clear (stop and remove) timers; returns true on success
   bool clearTimeout(uint32_t id);
-  // Backward-compatible alias for clearTimeout
-  bool clearTimer(uint32_t id);
   bool clearInterval(uint32_t id);
   bool clearSecCounter(uint32_t id);
   bool clearMsCounter(uint32_t id);

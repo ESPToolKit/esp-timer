@@ -3,6 +3,7 @@
 #include <ESPTimer.h>
 
 ESPTimer timer;
+volatile bool shouldDeinit = false;
 
 uint32_t intervalId;
 
@@ -39,6 +40,16 @@ void setup() {
     auto s = timer.getStatus(intervalId);
     Serial.printf("Status now: %d (Invalid=0 if removed)\n", (int)s);
   }, 10000);
+
+  timer.setTimeout([]() {
+    shouldDeinit = true;
+  }, 12000);
 }
 
-void loop() {}
+void loop() {
+  if (shouldDeinit && timer.isInitialized()) {
+    timer.deinit();
+    shouldDeinit = false;
+    Serial.println("ESPTimer deinitialized");
+  }
+}

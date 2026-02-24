@@ -3,6 +3,7 @@
 #include <ESPTimer.h>
 
 ESPTimer timer;  // Create your own instance
+volatile bool shouldDeinit = false;
 
 void setup() {
   Serial.begin(115200);
@@ -59,8 +60,19 @@ void setup() {
     auto s = timer.getStatus(t1);
     Serial.printf("Timeout status: %d\n", static_cast<int>(s));
   }, 2000);
+
+  // Request teardown from loop context (not from timer worker tasks).
+  timer.setTimeout([]() {
+    shouldDeinit = true;
+  }, 15000);
 }
 
 void loop() {
+  if (shouldDeinit && timer.isInitialized()) {
+    timer.deinit();
+    shouldDeinit = false;
+    Serial.println("Timer runtime deinitialized");
+  }
+
   // App code does other things; timers run in background FreeRTOS tasks
 }

@@ -32,11 +32,17 @@ void ESPTimer::deinit() {
   waitForTaskExit(hMs_);
   waitForTaskExit(hMin_);
 
-  timeouts_.clear();
-  intervals_.clear();
-  secs_.clear();
-  mss_.clear();
-  mins_.clear();
+  auto releaseStorage = [](auto& vec) {
+    using VecType = std::decay_t<decltype(vec)>;
+    VecType empty{vec.get_allocator()};
+    vec.swap(empty);
+  };
+
+  releaseStorage(timeouts_);
+  releaseStorage(intervals_);
+  releaseStorage(secs_);
+  releaseStorage(mss_);
+  releaseStorage(mins_);
 
   if (mutex_) {
     vSemaphoreDelete(mutex_);

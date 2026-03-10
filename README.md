@@ -105,6 +105,13 @@ Stack sizes are expressed in bytes.
 ## Tests
 Unity-based smoke tests live in `test/test_basic`. Drop the folder into your PlatformIO workspace (or add your own `platformio.ini` at the repo root) and run `pio test -e esp32dev` against an ESP32 dev kit. The test harness is Arduino friendly and exercises every timer type.
 
+## Formatting Baseline
+
+This repository follows the firmware formatting baseline from `esptoolkit-template`:
+- `.clang-format` is the source of truth for C/C++/INO layout.
+- `.editorconfig` enforces tabs (`tab_width = 4`), LF endings, and final newline.
+- Format all tracked firmware sources with `bash scripts/format_cpp.sh`.
+
 ## License
 MIT — see [LICENSE.md](LICENSE.md).
 

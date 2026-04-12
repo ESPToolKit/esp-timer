@@ -17,6 +17,7 @@ The format follows Keep a Changelog and the project adheres to Semantic Versioni
 - Ensured per-second and per-minute countdown timers emit their final tick by rounding up remaining time.
 - Added lifecycle test coverage for pre-init `deinit()`, repeated `deinit()`, and `init -> deinit -> init` reinitialization.
 - Removed library-owned exception/abort paths from timer allocation and callback dispatch, and guarded lifecycle state/ID generation behind a persistent mutex for task-safe use.
+- CI now pins PIOArduino Core to `v6.1.19` and installs the ESP32 platform via `pio pkg install`, restoring PlatformIO compatibility with the current `platform-espressif32` package.
 
 ### Documentation
 - Added an MIT license badge and cross-links to other ESPToolKit libraries in the README.

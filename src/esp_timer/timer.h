@@ -38,16 +38,24 @@ struct ESPTimerConfig {
 	// Prefer PSRAM-backed buffers for timer-owned dynamic containers.
 	// Falls back to default heap automatically when unavailable.
 	bool usePSRAMBuffers = false;
+
+	// Fixed slot capacities per timer type. Scheduling returns 0 when a bucket is full.
+	uint16_t maxTimeouts = 16;
+	uint16_t maxIntervals = 16;
+	uint16_t maxSecCounters = 8;
+	uint16_t maxMsCounters = 8;
+	uint16_t maxMinCounters = 8;
 };
 
 class ESPTimer {
   public:
+	ESPTimer();
 	~ESPTimer();
 
 	void init(const ESPTimerConfig &cfg = ESPTimerConfig());
 	void deinit();
 	bool isInitialized() const {
-		return initialized_;
+		return lifecycleState_.load(std::memory_order_acquire) == LifecycleState::Initialized;
 	}
 
 	// Scheduling
@@ -90,11 +98,19 @@ class ESPTimer {
 
   private:
 	enum class Type : uint8_t { Timeout, Interval, Sec, Ms, Min };
+	enum class LifecycleState : uint8_t {
+		Uninitialized,
+		Initializing,
+		Initialized,
+		Deinitializing
+	};
 
 	struct BaseItem {
+		bool active = false;
+		bool executing = false;
 		uint32_t id = 0;
-		ESPTimerStatus status = ESPTimerStatus::Running;
-		Type type;
+		ESPTimerStatus status = ESPTimerStatus::Invalid;
+		Type type = Type::Timeout;
 		uint32_t createdMs = 0;
 	};
 
@@ -127,6 +143,25 @@ class ESPTimer {
 		uint32_t lastTickMs = 0;
 	};
 
+	struct TimedDispatch {
+		size_t index = 0;
+	};
+
+	struct SecDispatch {
+		size_t index = 0;
+		int arg = 0;
+	};
+
+	struct MsDispatch {
+		size_t index = 0;
+		uint32_t arg = 0;
+	};
+
+	struct MinDispatch {
+		size_t index = 0;
+		int arg = 0;
+	};
+
 	// Storage per type
 	TimerVector<TimeoutItem> timeouts_;
 	TimerVector<IntervalItem> intervals_;
@@ -134,8 +169,14 @@ class ESPTimer {
 	TimerVector<MsItem> mss_;
 	TimerVector<MinItem> mins_;
 
+	TimerVector<TimedDispatch> timeoutDispatch_;
+	TimerVector<TimedDispatch> intervalDispatch_;
+	TimerVector<SecDispatch> secDispatch_;
+	TimerVector<MsDispatch> msDispatch_;
+	TimerVector<MinDispatch> minDispatch_;
+
 	// FreeRTOS bits
-	SemaphoreHandle_t mutex_ = nullptr;
+	mutable SemaphoreHandle_t mutex_ = nullptr;
 	TaskHandle_t hTimeout_ = nullptr;
 	TaskHandle_t hInterval_ = nullptr;
 	TaskHandle_t hSec_ = nullptr;
@@ -143,14 +184,14 @@ class ESPTimer {
 	TaskHandle_t hMin_ = nullptr;
 
 	ESPTimerConfig cfg_{};
-	bool initialized_ = false;
 	std::atomic<bool> running_{false};
+	std::atomic<LifecycleState> lifecycleState_{LifecycleState::Uninitialized};
 	uint32_t nextId_ = 1;
 	bool usePSRAMBuffers_ = false;
 
-	uint32_t nextId();
-	void lock();
-	void unlock();
+	bool lock() const;
+	void unlock() const;
+	uint32_t nextIdLocked();
 
 	// Task loops
 	static void timeoutTaskTrampoline(void *arg);
@@ -166,6 +207,28 @@ class ESPTimer {
 	void minTask();
 
 	// Helpers
+	bool configureStorageLocked();
+	void releaseStorageLocked();
+	void waitForWorkerExit(TaskHandle_t &handle);
+	void markTaskExited(Type type);
+	bool tryCreateWorkerLocked(
+	    TaskFunction_t fn,
+	    const char *name,
+	    uint16_t stack,
+	    UBaseType_t prio,
+	    int8_t core,
+	    TaskHandle_t &handle
+	);
+	ESPTimerConfig normalizeConfig(const ESPTimerConfig &cfg) const;
+	ESPTimerStatus getStatusLocked(uint32_t id) const;
+
+	template <typename Item> void resetItem(Item &item, Type type);
+	template <typename Item> Item *findItemById(TimerVector<Item> &vec, uint32_t id);
+	template <typename Item>
+	const Item *findItemById(const TimerVector<Item> &vec, uint32_t id) const;
+	template <typename Item> Item *findFreeSlot(TimerVector<Item> &vec);
+	template <typename Item> void clearStoppedLocked(TimerVector<Item> &vec, Type type);
+
 	bool pauseItem(Type type, uint32_t id);
 	bool resumeItem(Type type, uint32_t id);
 	ESPTimerStatus

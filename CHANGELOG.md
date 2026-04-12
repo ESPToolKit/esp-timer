@@ -10,10 +10,13 @@ The format follows Keep a Changelog and the project adheres to Semantic Versioni
 - Standardized teardown around `deinit()` + `isInitialized()` and removed the `clearTimer(id)` alias in favor of `clearTimeout(id)`.
 - Added `ESPTimerConfig::usePSRAMBuffers` and routed timer-owned persistent/transient vectors through `ESPBufferManager` with safe fallback to default heap.
 - Migrated timer lane task creation/lifecycle back to native FreeRTOS task handling (`xTaskCreatePinnedToCore`/`vTaskDelete`).
+- Added fixed-capacity timer buckets (`maxTimeouts`, `maxIntervals`, `maxSecCounters`, `maxMsCounters`, `maxMinCounters`) so runtime scheduling stays bounded after `init()`.
+- Made `init()` transactional and standardized sentinel failure behavior: failed init leaves the instance uninitialized and `set*` helpers return `0` when the instance is unavailable or full.
 
 ### Fixed
 - Ensured per-second and per-minute countdown timers emit their final tick by rounding up remaining time.
 - Added lifecycle test coverage for pre-init `deinit()`, repeated `deinit()`, and `init -> deinit -> init` reinitialization.
+- Removed library-owned exception/abort paths from timer allocation and callback dispatch, and guarded lifecycle state/ID generation behind a persistent mutex for task-safe use.
 
 ### Documentation
 - Added an MIT license badge and cross-links to other ESPToolKit libraries in the README.

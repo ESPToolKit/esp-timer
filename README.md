@@ -26,8 +26,12 @@ volatile bool shouldShutdownTimers = false;
 void setup() {
     Serial.begin(115200);
     timer.init();
+    if (!timer.isInitialized()) {
+        Serial.println("Timer init failed");
+        return;
+    }
 
-    timer.setTimeout([](){
+    uint32_t timeoutId = timer.setTimeout([](){
         Serial.println("Fired once after 1.5 s");
     }, 1500);
 
@@ -47,8 +51,14 @@ void setup() {
         Serial.printf("%d minutes remaining\n", minLeft);
     }, 60000);
 
-    timer.pauseInterval(intervalId);
-    timer.resumeInterval(intervalId);
+    if (timeoutId == 0 || intervalId == 0) {
+        Serial.println("Timer capacity or allocation failure");
+    }
+
+    if (intervalId != 0) {
+        timer.pauseInterval(intervalId);
+        timer.resumeInterval(intervalId);
+    }
 
     timer.setTimeout([](){
         shouldShutdownTimers = true;
@@ -71,17 +81,20 @@ Explore `examples/Basic/Basic.ino` for a complete sketch that demonstrates all t
 - Each timer type owns its own FreeRTOS task. Tune `ESPTimerConfig` when you need larger stacks or different priorities.
 - IDs are unique per `ESPTimer` instance. Clearing a timer frees the ID; reusing stale IDs after `clear*` will fail.
 - `usePSRAMBuffers = true` is best-effort for timer-owned dynamic buffers. If PSRAM is unavailable, allocation falls back to normal heap automatically.
+- `init()` is transactional. If mutex/task/storage setup fails, `isInitialized()` remains `false` and scheduling helpers return `0`.
+- Runtime capacity is fixed at `init()` time. When a timer lane is full, its `set*` helper returns `0` instead of throwing or aborting.
+- ESPTimer does not throw from library-owned code paths. `std::function` construction before the API boundary may still allocate depending on your toolchain and callback capture size.
 
 ## API Reference
-- `void init(const ESPTimerConfig& cfg = {})` – allocate mutexes and spawn each timer worker with the provided stack/priority/core settings.
+- `void init(const ESPTimerConfig& cfg = {})` – allocate persistent storage, then spawn each timer worker with the provided stack/priority/core settings. On failure the instance stays uninitialized.
 - `void deinit()` – idempotently stop all timer workers, clear active timers/counters, and free runtime resources.
 - `bool isInitialized() const` – `true` when timer workers and synchronization primitives are active.
 - Scheduling helpers
-  - `uint32_t setTimeout(std::function<void()> cb, uint32_t delayMs)`
-  - `uint32_t setInterval(std::function<void()> cb, uint32_t periodMs)`
-  - `uint32_t setSecCounter(std::function<void(int)> cb, uint32_t totalMs)`
-  - `uint32_t setMsCounter(std::function<void(uint32_t)> cb, uint32_t totalMs)`
-  - `uint32_t setMinCounter(std::function<void(int)> cb, uint32_t totalMs)`
+  - `uint32_t setTimeout(std::function<void()> cb, uint32_t delayMs)` – returns `0` when uninitialized, full, or unable to accept the timer.
+  - `uint32_t setInterval(std::function<void()> cb, uint32_t periodMs)` – returns `0` on failure.
+  - `uint32_t setSecCounter(std::function<void(int)> cb, uint32_t totalMs)` – returns `0` on failure.
+  - `uint32_t setMsCounter(std::function<void(uint32_t)> cb, uint32_t totalMs)` – returns `0` on failure.
+  - `uint32_t setMinCounter(std::function<void(int)> cb, uint32_t totalMs)` – returns `0` on failure.
 - Control helpers: `pause*`, `resume*`, `toggleRunStatus*`, `clear*`, `ESPTimerStatus getStatus(id)`.
   - Timeout-specific clear: `clearTimeout(id)`.
 
@@ -90,6 +103,7 @@ Explore `examples/Basic/Basic.ino` for a complete sketch that demonstrates all t
 - Priorities (`priorityTimeout`, …).
 - Core affinity (`core*`, `-1` = no pin).
 - Buffer policy (`usePSRAMBuffers`) for timer-owned vectors and callback dispatch staging buffers.
+- Fixed capacities (`maxTimeouts`, `maxIntervals`, `maxSecCounters`, `maxMsCounters`, `maxMinCounters`) used to preallocate all timer-owned runtime slots.
 
 `usePSRAMBuffers` only affects allocations owned by ESPTimer. Callback captures (`std::function`) can still allocate outside this policy depending on capture size and STL behavior.
 
